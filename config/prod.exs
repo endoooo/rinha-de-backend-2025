@@ -5,8 +5,7 @@ config :logger, level: :info
 
 # Production-specific Phoenix endpoint config
 config :payment_processor, PaymentProcessorWeb.Endpoint,
-  http: [ip: {0, 0, 0, 0}, port: 9999],
-  cache_static_manifest: "priv/static/cache_manifest.json"
+  http: [ip: {0, 0, 0, 0}, port: 9999]
 
 # Database connection pool optimization
 config :payment_processor, PaymentProcessor.Repo,

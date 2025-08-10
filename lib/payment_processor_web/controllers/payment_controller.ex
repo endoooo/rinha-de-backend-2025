@@ -4,8 +4,7 @@ defmodule PaymentProcessorWeb.PaymentController do
 
   def create(conn, %{"correlationId" => correlation_id, "amount" => amount}) do
     with {:ok, uuid} <- validate_uuid(correlation_id),
-         {:ok, decimal_amount} <- validate_amount(amount),
-         nil <- Payments.get_payment_by_correlation_id(uuid) do
+         {:ok, decimal_amount} <- validate_amount(amount) do
       
       # Process payment asynchronously in the background
       case PaymentRouter.route_payment(uuid, decimal_amount) do
@@ -48,11 +47,6 @@ defmodule PaymentProcessorWeb.PaymentController do
         conn
         |> put_status(:bad_request)
         |> json(%{error: "Invalid amount"})
-      
-      %Payments.Payment{} ->
-        conn
-        |> put_status(:conflict)
-        |> json(%{error: "Payment with this correlation ID already exists"})
       
       {:error, :no_processors_available} ->
         conn

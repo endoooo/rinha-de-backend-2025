@@ -41,3 +41,8 @@
 **Context**: Improving from 17% success rate and 10s response times to high-performance system
 **Action**: Optimized Nginx config with keepalive, async database writes, improved connection pooling, database indexes, reduced health check frequency
 **Learning**: Phoenix/Bandit configuration constraints, async processing patterns in Elixir, Nginx optimization for high-concurrency load balancing
+
+### 2025-08-10 - Advanced Performance Optimizations
+**Context**: Further optimization to reduce p99 from 1.5s to under 1.25s for performance bonus and compete with $380K leader
+**Action**: Removed duplicate correlation ID checking, implemented HTTP connection pooling with Finch (50 conns per processor), added keepalive/nodelay TCP options, made health checks async and less frequent (30s)
+**Learning**: Database reads are major bottleneck for latency, Finch connection pooling configuration, async health monitoring patterns, TCP optimization for HTTP clients

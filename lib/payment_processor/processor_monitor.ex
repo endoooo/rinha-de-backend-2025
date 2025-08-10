@@ -2,7 +2,7 @@ defmodule PaymentProcessor.ProcessorMonitor do
   use GenServer
   alias PaymentProcessor.ProcessorClient
 
-  @check_interval 10_000
+  @check_interval 30_000
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
@@ -25,12 +25,26 @@ defmodule PaymentProcessor.ProcessorMonitor do
 
   @impl true
   def handle_info(:health_check, state) do
-    new_state = %{
-      default: check_processor(:default),
-      fallback: check_processor(:fallback)
-    }
+    # Perform health checks asynchronously to avoid blocking
+    parent = self()
+    
+    spawn(fn ->
+      default_status = check_processor(:default)
+      send(parent, {:health_result, :default, default_status})
+    end)
+    
+    spawn(fn ->
+      fallback_status = check_processor(:fallback)
+      send(parent, {:health_result, :fallback, fallback_status})
+    end)
     
     schedule_health_check()
+    {:noreply, state}
+  end
+  
+  @impl true
+  def handle_info({:health_result, processor_type, status}, state) do
+    new_state = Map.put(state, processor_type, status)
     {:noreply, new_state}
   end
 

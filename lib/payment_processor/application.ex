@@ -10,7 +10,35 @@ defmodule PaymentProcessor.Application do
     children = [
       PaymentProcessorWeb.Telemetry,
       PaymentProcessor.Repo,
-      {Finch, name: PaymentProcessor.ProcessorClient},
+      {Finch, 
+        name: PaymentProcessor.ProcessorClient,
+        pools: %{
+          "http://payment-processor-default:8080" => [
+            size: 50,
+            count: 2,
+            conn_opts: [
+              transport_opts: [
+                inet6: false,
+                nodelay: true,
+                keepalive: true
+              ]
+            ],
+            conn_max_idle_time: 60_000
+          ],
+          "http://payment-processor-fallback:8080" => [
+            size: 50,
+            count: 2,
+            conn_opts: [
+              transport_opts: [
+                inet6: false,
+                nodelay: true,
+                keepalive: true
+              ]
+            ],
+            conn_max_idle_time: 60_000
+          ]
+        }
+      },
       PaymentProcessor.ProcessorMonitor,
       {DNSCluster, query: Application.get_env(:payment_processor, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: PaymentProcessor.PubSub},
