@@ -13,8 +13,14 @@ defmodule PaymentProcessor.Payments do
     Repo.get_by(Payment, correlation_id: correlation_id)
   end
 
+  def update_payment(%Payment{} = payment, attrs) do
+    payment
+    |> Payment.changeset(attrs)
+    |> Repo.update()
+  end
+
   def get_payments_summary(from_timestamp \\ nil, to_timestamp \\ nil) do
-    query = from p in Payment
+    query = from p in Payment, where: p.status == "success"
 
     query = case {from_timestamp, to_timestamp} do
       {nil, nil} -> query

@@ -46,3 +46,8 @@
 **Context**: Further optimization to reduce p99 from 1.5s to under 1.25s for performance bonus and compete with $380K leader
 **Action**: Removed duplicate correlation ID checking, implemented HTTP connection pooling with Finch (50 conns per processor), added keepalive/nodelay TCP options, made health checks async and less frequent (30s)
 **Learning**: Database reads are major bottleneck for latency, Finch connection pooling configuration, async health monitoring patterns, TCP optimization for HTTP clients
+
+### 2025-08-10 - Payments Inconsistency Fix
+**Context**: 5068 payments inconsistencies causing test failures, 64.5% failure rate with database-first approach
+**Action**: Implemented fast in-memory deduplication using ETS table, restored async DB writes for performance, GenServer-based deduplication cache with atomic check-and-mark
+**Learning**: Database-first consistency creates massive performance bottleneck (4s+ response times), ETS provides microsecond-level atomic operations, in-memory deduplication preserves both consistency and performance

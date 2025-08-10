@@ -40,6 +40,7 @@ defmodule PaymentProcessor.Application do
         }
       },
       PaymentProcessor.ProcessorMonitor,
+      PaymentProcessor.DeduplicationCache,
       {DNSCluster, query: Application.get_env(:payment_processor, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: PaymentProcessor.PubSub},
       # Start a worker by calling: PaymentProcessor.Worker.start_link(arg)

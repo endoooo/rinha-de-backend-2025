@@ -21,8 +21,8 @@ defmodule PaymentProcessor.Payments.Payment do
     |> cast(attrs, [:correlation_id, :amount, :processor_used, :status, :processor_response, :processed_at])
     |> validate_required([:correlation_id, :amount, :processor_used, :status, :processed_at])
     |> validate_number(:amount, greater_than: 0)
-    |> validate_inclusion(:processor_used, ["default", "fallback"])
-    |> validate_inclusion(:status, ["success", "failed"])
+    |> validate_inclusion(:processor_used, ["default", "fallback", "pending"])
+    |> validate_inclusion(:status, ["success", "failed", "pending"])
     |> unique_constraint(:correlation_id)
   end
 end

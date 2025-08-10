@@ -1,41 +1,49 @@
 defmodule PaymentProcessorWeb.PaymentController do
   use PaymentProcessorWeb, :controller
-  alias PaymentProcessor.{PaymentRouter, Payments}
+  alias PaymentProcessor.{PaymentRouter, Payments, DeduplicationCache}
 
   def create(conn, %{"correlationId" => correlation_id, "amount" => amount}) do
     with {:ok, uuid} <- validate_uuid(correlation_id),
          {:ok, decimal_amount} <- validate_amount(amount) do
       
-      # Process payment asynchronously in the background
-      case PaymentRouter.route_payment(uuid, decimal_amount) do
-        {:ok, processor_used, _response} ->
-          
-          payment_attrs = %{
-            correlation_id: uuid,
-            amount: decimal_amount,
-            processor_used: Atom.to_string(processor_used),
-            status: "success",
-            processed_at: DateTime.utc_now()
-          }
-          
-          # Return success immediately, log DB insert failures but don't block
-          spawn(fn -> 
-            case Payments.create_payment(payment_attrs) do
-              {:ok, _payment} -> :ok
-              {:error, changeset} -> 
-                require Logger
-                Logger.error("Failed to record payment: #{inspect(changeset)}")
-            end
-          end)
-          
-          conn
-          |> put_status(:created)
-          |> json(%{status: "success"})
+      # Check for duplicates using fast in-memory cache
+      case DeduplicationCache.check_and_mark(uuid) do
+        :ok ->
+          # Process payment first, then record asynchronously
+          case PaymentRouter.route_payment(uuid, decimal_amount) do
+            {:ok, processor_used, _response} ->
+              payment_attrs = %{
+                correlation_id: uuid,
+                amount: decimal_amount,
+                processor_used: Atom.to_string(processor_used),
+                status: "success",
+                processed_at: DateTime.utc_now()
+              }
+              
+              # Record payment asynchronously to avoid blocking response
+              spawn(fn -> 
+                case Payments.create_payment(payment_attrs) do
+                  {:ok, _payment} -> :ok
+                  {:error, changeset} -> 
+                    require Logger
+                    Logger.error("Failed to record payment: #{inspect(changeset)}")
+                end
+              end)
+              
+              conn
+              |> put_status(:created)
+              |> json(%{status: "success"})
+            
+            {:error, _reason} ->
+              conn
+              |> put_status(:service_unavailable)
+              |> json(%{error: "Payment processing failed"})
+          end
         
-        {:error, _reason} ->
+        :duplicate ->
           conn
-          |> put_status(:service_unavailable)
-          |> json(%{error: "Payment processing failed"})
+          |> put_status(:conflict)
+          |> json(%{error: "Payment with this correlation ID already exists"})
       end
     else
       {:error, :invalid_uuid} ->
