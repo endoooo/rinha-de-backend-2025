@@ -4,24 +4,28 @@ defmodule PaymentProcessor.ProcessorClient do
   Handles health checks and payment processing requests.
   """
 
-  @default_processor_url "http://localhost:8001"
-  @fallback_processor_url "http://localhost:8002"
+  @default_processor_url "http://payment-processor-default:8080"
+  @fallback_processor_url "http://payment-processor-fallback:8080"
 
   def child_spec(_opts) do
     Finch.child_spec(name: __MODULE__)
   end
 
   def health_check(:default) do
-    make_request(:get, "#{@default_processor_url}/health")
+    make_request(:get, "#{@default_processor_url}/payments/service-health")
   end
 
   def health_check(:fallback) do
-    make_request(:get, "#{@fallback_processor_url}/health")
+    make_request(:get, "#{@fallback_processor_url}/payments/service-health")
   end
 
   def process_payment(processor_type, correlation_id, amount) do
     url = processor_url(processor_type)
-    body = Jason.encode!(%{correlationId: correlation_id, amount: amount})
+    body = Jason.encode!(%{
+      correlationId: correlation_id, 
+      amount: amount,
+      requestedAt: DateTime.utc_now() |> DateTime.to_iso8601()
+    })
     
     make_request(:post, "#{url}/payments", body, [{"content-type", "application/json"}])
   end

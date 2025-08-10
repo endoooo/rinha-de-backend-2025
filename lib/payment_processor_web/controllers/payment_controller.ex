@@ -62,20 +62,15 @@ defmodule PaymentProcessorWeb.PaymentController do
   end
 
   def summary(conn, params) do
-    timestamp = case Map.get(params, "timestamp") do
-      nil -> nil
-      ts -> parse_timestamp(ts)
-    end
-
-    case timestamp do
+    with {:ok, from_ts} <- parse_optional_timestamp(Map.get(params, "from")),
+         {:ok, to_ts} <- parse_optional_timestamp(Map.get(params, "to")) do
+      summary = Payments.get_payments_summary(from_ts, to_ts)
+      json(conn, summary)
+    else
       {:error, :invalid_timestamp} ->
         conn
         |> put_status(:bad_request)
         |> json(%{error: "Invalid timestamp format"})
-      
-      parsed_timestamp ->
-        summary = Payments.get_payments_summary(parsed_timestamp)
-        json(conn, summary)
     end
   end
 
@@ -100,11 +95,12 @@ defmodule PaymentProcessorWeb.PaymentController do
   end
   defp validate_amount(_), do: {:error, :invalid_amount}
 
-  defp parse_timestamp(timestamp) when is_binary(timestamp) do
+  defp parse_optional_timestamp(nil), do: {:ok, nil}
+  defp parse_optional_timestamp(timestamp) when is_binary(timestamp) do
     case DateTime.from_iso8601(timestamp) do
-      {:ok, datetime, _} -> datetime
+      {:ok, datetime, _} -> {:ok, datetime}
       {:error, _} -> {:error, :invalid_timestamp}
     end
   end
-  defp parse_timestamp(_), do: {:error, :invalid_timestamp}
+  defp parse_optional_timestamp(_), do: {:error, :invalid_timestamp}
 end

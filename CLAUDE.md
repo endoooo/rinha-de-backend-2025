@@ -65,6 +65,31 @@ This is an Elixir application for the "Rinha de backend 2025" challenge. The foc
 
 **Deadline**: August 17, 2025
 
+## API Specifications (Challenge Requirements)
+
+**Backend Endpoints (Port 9999):**
+1. `POST /payments`
+   - Request: `{"correlationId": "UUID", "amount": decimal}`
+   - Response: Any 2XX status code
+
+2. `GET /payments-summary`
+   - Query params: `from`, `to` (ISO UTC timestamps, optional)
+   - Response: `{"default": {"totalRequests": int, "totalAmount": decimal}, "fallback": {"totalRequests": int, "totalAmount": decimal}}`
+
+**Payment Processor Endpoints:**
+1. `POST /payments` - Process payment
+   - Request: `{"correlationId": "UUID", "amount": decimal, "requestedAt": "ISO UTC timestamp"}`
+   - Response: `{"message": "payment processed successfully"}`
+
+2. `GET /payments/service-health` - Health check
+   - Response: `{"failing": boolean, "minResponseTime": integer}`
+
+3. `GET /payments/{id}` - Get payment details
+
+**Processor URLs:**
+- Default: `http://payment-processor-default:8080` (lower fees)
+- Fallback: `http://payment-processor-fallback:8080` (higher fees)
+
 ## Architecture Design
 
 **Core Components:**
@@ -73,14 +98,6 @@ This is an Elixir application for the "Rinha de backend 2025" challenge. The foc
 3. `PaymentProcessor.ProcessorClient` - HTTP client for processor communication
 4. `PaymentProcessor.Payments` - Context for payment business logic
 5. `PaymentProcessorWeb.PaymentController` - API endpoints
-
-**Supervision Tree:**
-```
-Application
-├── Repo (Database)
-├── ProcessorMonitor (GenServer)
-└── Endpoint (Phoenix Web Server)
-```
 
 **Data Flow:**
 1. POST /payments → Controller validates → PaymentRouter selects processor

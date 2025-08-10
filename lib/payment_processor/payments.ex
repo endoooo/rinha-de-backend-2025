@@ -13,13 +13,14 @@ defmodule PaymentProcessor.Payments do
     Repo.get_by(Payment, correlation_id: correlation_id)
   end
 
-  def get_payments_summary(from_timestamp \\ nil) do
+  def get_payments_summary(from_timestamp \\ nil, to_timestamp \\ nil) do
     query = from p in Payment
 
-    query = if from_timestamp do
-      from p in query, where: p.processed_at >= ^from_timestamp
-    else
-      query
+    query = case {from_timestamp, to_timestamp} do
+      {nil, nil} -> query
+      {from_ts, nil} -> from p in query, where: p.processed_at >= ^from_ts
+      {nil, to_ts} -> from p in query, where: p.processed_at <= ^to_ts
+      {from_ts, to_ts} -> from p in query, where: p.processed_at >= ^from_ts and p.processed_at <= ^to_ts
     end
 
     results = from(p in query,
@@ -32,15 +33,15 @@ defmodule PaymentProcessor.Payments do
     ) |> Repo.all()
 
     %{
-      default: extract_processor_stats(results, "default"),
-      fallback: extract_processor_stats(results, "fallback")
+      "default" => extract_processor_stats(results, "default"),
+      "fallback" => extract_processor_stats(results, "fallback")
     }
   end
 
   defp extract_processor_stats(results, processor_type) do
     case Enum.find(results, fn {proc, _count, _sum} -> proc == processor_type end) do
-      {_processor, count, sum} -> %{count: count, total_amount: sum || Decimal.new(0)}
-      nil -> %{count: 0, total_amount: Decimal.new(0)}
+      {_processor, count, sum} -> %{"totalRequests" => count, "totalAmount" => sum || Decimal.new(0)}
+      nil -> %{"totalRequests" => 0, "totalAmount" => Decimal.new(0)}
     end
   end
 end

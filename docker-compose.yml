@@ -1,3 +1,8 @@
+networks:
+  payment-processor:
+    external: true
+    name: payment-processor
+
 services:
   db:
     image: postgres:15-alpine
@@ -7,39 +12,64 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     deploy:
       resources:
         limits:
           cpus: '0.3'
-          memory: 120M
+          memory: 90M
 
   api1:
     build: .
     environment:
       DATABASE_URL: ecto://postgres:postgres@db/payment_processor_prod
+      SECRET_KEY_BASE: "VvoX+B2qGQFBpIYKnKOqfKsLJ5w9O5fSBW9qK9BqP7W5/K2GFp7+DqXGJ8WBqP3Q"
       PORT: 9999
       MIX_ENV: prod
+      PHX_SERVER: true
+      ERL_MAX_PORTS: 8192
+      ERL_MAX_ETS_TABLES: 2048
+      ELIXIR_ERL_OPTIONS: "+P 8192 +Q 65536 +K true +A 4"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    networks:
+      - default
+      - payment-processor
     deploy:
       resources:
         limits:
           cpus: '0.5'
-          memory: 110M
+          memory: 125M
+    restart: unless-stopped
 
   api2:
     build: .
     environment:
       DATABASE_URL: ecto://postgres:postgres@db/payment_processor_prod
+      SECRET_KEY_BASE: "VvoX+B2qGQFBpIYKnKOqfKsLJ5w9O5fSBW9qK9BqP7W5/K2GFp7+DqXGJ8WBqP3Q"
       PORT: 9999  
       MIX_ENV: prod
+      PHX_SERVER: true
+      ERL_MAX_PORTS: 8192
+      ERL_MAX_ETS_TABLES: 2048
+      ELIXIR_ERL_OPTIONS: "+P 8192 +Q 65536 +K true +A 4"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    networks:
+      - default
+      - payment-processor
     deploy:
       resources:
         limits:
           cpus: '0.5'
-          memory: 110M
+          memory: 125M
+    restart: unless-stopped
 
   nginx:
     image: nginx:alpine

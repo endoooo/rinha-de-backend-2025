@@ -31,3 +31,8 @@
 **Context**: Setting up local testing environment with challenge payment processors
 **Action**: Configured payment processor URLs (8001/8002), set up challenge services with ARM64 compatibility, fixed memory allocation issues (110MB per API instance)
 **Learning**: Docker platform compatibility (AMD64 vs ARM64), container memory limits and OOM kills (exit code 137), resource allocation within challenge constraints
+
+### 2025-08-10 - Challenge Integration & Multi-stage Docker
+**Context**: Fixing API compliance issues and performance problems with runtime compilation
+**Action**: Updated processor URLs to correct hostnames, fixed API response formats, implemented multi-stage Docker build with Elixir releases, added network connectivity to payment processors
+**Learning**: Challenge-specific API requirements, multi-stage Docker builds for performance (compile vs runtime), Elixir releases for production deployment
