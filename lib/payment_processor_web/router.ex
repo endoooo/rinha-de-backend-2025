@@ -5,8 +5,11 @@ defmodule PaymentProcessorWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/api", PaymentProcessorWeb do
+  scope "/", PaymentProcessorWeb do
     pipe_through :api
+
+    post "/payments", PaymentController, :create
+    get "/payments-summary", PaymentController, :summary
   end
 
   # Enable LiveDashboard in development

@@ -18,7 +18,11 @@
 **Learning**: Challenge requires payment processor intermediary with intelligent routing between default/fallback processors
 
 ### 2025-08-10 - Core Architecture Implementation
-
 **Context**: Building payment processor routing system with health monitoring
 **Action**: Implemented Finch HTTP client, ProcessorMonitor GenServer, PaymentRouter logic, and database schema
 **Learning**: OTP supervision trees with Finch for connection pooling, GenServer for stateful health checks, pattern matching for routing logic
+
+### 2025-08-10 - API Endpoints & Production Setup
+**Context**: Completing challenge requirements with REST API and deployment setup
+**Action**: Built POST /payments and GET /payments-summary endpoints, Payment schema/context, Docker Compose with Nginx load balancing
+**Learning**: Phoenix controllers with proper validation, Ecto contexts for business logic, Docker multi-service orchestration with resource constraints
