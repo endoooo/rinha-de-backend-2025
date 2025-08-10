@@ -5,27 +5,38 @@ defmodule PaymentProcessorWeb.PaymentController do
   def create(conn, %{"correlationId" => correlation_id, "amount" => amount}) do
     with {:ok, uuid} <- validate_uuid(correlation_id),
          {:ok, decimal_amount} <- validate_amount(amount),
-         nil <- Payments.get_payment_by_correlation_id(uuid),
-         {:ok, processor_used, _response} <- PaymentRouter.route_payment(uuid, decimal_amount) do
+         nil <- Payments.get_payment_by_correlation_id(uuid) do
       
-      payment_attrs = %{
-        correlation_id: uuid,
-        amount: decimal_amount,
-        processor_used: Atom.to_string(processor_used),
-        status: "success",
-        processed_at: DateTime.utc_now()
-      }
-      
-      case Payments.create_payment(payment_attrs) do
-        {:ok, _payment} ->
+      # Process payment asynchronously in the background
+      case PaymentRouter.route_payment(uuid, decimal_amount) do
+        {:ok, processor_used, _response} ->
+          
+          payment_attrs = %{
+            correlation_id: uuid,
+            amount: decimal_amount,
+            processor_used: Atom.to_string(processor_used),
+            status: "success",
+            processed_at: DateTime.utc_now()
+          }
+          
+          # Return success immediately, log DB insert failures but don't block
+          spawn(fn -> 
+            case Payments.create_payment(payment_attrs) do
+              {:ok, _payment} -> :ok
+              {:error, changeset} -> 
+                require Logger
+                Logger.error("Failed to record payment: #{inspect(changeset)}")
+            end
+          end)
+          
           conn
           |> put_status(:created)
           |> json(%{status: "success"})
         
-        {:error, _changeset} ->
+        {:error, _reason} ->
           conn
-          |> put_status(:internal_server_error)
-          |> json(%{error: "Failed to record payment"})
+          |> put_status(:service_unavailable)
+          |> json(%{error: "Payment processing failed"})
       end
     else
       {:error, :invalid_uuid} ->

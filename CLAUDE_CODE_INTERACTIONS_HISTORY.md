@@ -36,3 +36,8 @@
 **Context**: Fixing API compliance issues and performance problems with runtime compilation
 **Action**: Updated processor URLs to correct hostnames, fixed API response formats, implemented multi-stage Docker build with Elixir releases, added network connectivity to payment processors
 **Learning**: Challenge-specific API requirements, multi-stage Docker builds for performance (compile vs runtime), Elixir releases for production deployment
+
+### 2025-08-10 - Performance Optimization & Load Testing
+**Context**: Improving from 17% success rate and 10s response times to high-performance system
+**Action**: Optimized Nginx config with keepalive, async database writes, improved connection pooling, database indexes, reduced health check frequency
+**Learning**: Phoenix/Bandit configuration constraints, async processing patterns in Elixir, Nginx optimization for high-concurrency load balancing

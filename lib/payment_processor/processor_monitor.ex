@@ -2,7 +2,7 @@ defmodule PaymentProcessor.ProcessorMonitor do
   use GenServer
   alias PaymentProcessor.ProcessorClient
 
-  @check_interval 5_000
+  @check_interval 10_000
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)

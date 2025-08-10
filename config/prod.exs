@@ -8,5 +8,11 @@ config :payment_processor, PaymentProcessorWeb.Endpoint,
   http: [ip: {0, 0, 0, 0}, port: 9999],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
+# Database connection pool optimization
+config :payment_processor, PaymentProcessor.Repo,
+  pool_size: 15,
+  queue_target: 50,
+  queue_interval: 1000
+
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.
