@@ -26,3 +26,8 @@
 **Context**: Completing challenge requirements with REST API and deployment setup
 **Action**: Built POST /payments and GET /payments-summary endpoints, Payment schema/context, Docker Compose with Nginx load balancing
 **Learning**: Phoenix controllers with proper validation, Ecto contexts for business logic, Docker multi-service orchestration with resource constraints
+
+### 2025-08-10 - Local Testing Setup & Docker Troubleshooting
+**Context**: Setting up local testing environment with challenge payment processors
+**Action**: Configured payment processor URLs (8001/8002), set up challenge services with ARM64 compatibility, fixed memory allocation issues (110MB per API instance)
+**Learning**: Docker platform compatibility (AMD64 vs ARM64), container memory limits and OOM kills (exit code 137), resource allocation within challenge constraints

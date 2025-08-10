@@ -93,6 +93,21 @@ Application
 - Focus on learning outcomes and major implementation steps
 - Keep entries minimal but informative for future reference
 
+## Local Testing Instructions (Rinha Challenge)
+
+**Prerequisites:**
+- Install k6 following official k6 installation instructions
+- Download rinha-test directory from challenge repository
+
+**Testing Steps:**
+1. Start backend containers: `docker-compose up -d` 
+2. Navigate to rinha-test directory
+3. Run basic test: `k6 run rinha.js`
+4. Optional: Customize requests: `k6 run -e MAX_REQUESTS=550 rinha.js`
+5. Optional: Enable dashboard: `export K6_WEB_DASHBOARD=true && export K6_WEB_DASHBOARD_EXPORT='report.html'`
+
+**Note:** Test uses k6 for performance testing, focusing on concurrent request handling
+
 ## Challenge Preparation Notes
 - Performance will likely be a key metric (p99 response times)
 - Database optimization may be crucial for payment tracking

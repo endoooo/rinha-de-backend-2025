@@ -4,8 +4,8 @@ defmodule PaymentProcessor.ProcessorClient do
   Handles health checks and payment processing requests.
   """
 
-  @default_processor_url "http://localhost:3001"
-  @fallback_processor_url "http://localhost:3002"
+  @default_processor_url "http://localhost:8001"
+  @fallback_processor_url "http://localhost:8002"
 
   def child_spec(_opts) do
     Finch.child_spec(name: __MODULE__)
