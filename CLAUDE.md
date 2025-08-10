@@ -1,0 +1,101 @@
+# Rinha de Backend 2025 - Elixir Project
+
+## Project Context
+This is an Elixir application for the "Rinha de backend 2025" challenge. The focus is on learning and understanding Elixir concepts, tools, and best practices.
+
+## Learning-Focused Approach
+- **Primary Goal**: Educational - prioritize understanding over speed
+- **Explain concepts**: When introducing new Elixir features, patterns, or tools, provide brief explanations
+- **Show alternatives**: When applicable, mention different approaches and why we chose one
+- **Learning areas to focus on**:
+  - Elixir syntax and functional programming patterns
+  - Phoenix framework (if web API is required)
+  - OTP (Supervisors, GenServers, etc.)
+  - Database integration (Ecto)
+  - Performance optimization techniques
+  - Testing with ExUnit
+  - Deployment and containerization
+
+## Technology Stack
+- **Language**: Elixir
+- **Web Framework**: Phoenix (if needed)
+- **Database**: PostgreSQL (typical for challenges)
+- **ORM**: Ecto
+- **Testing**: ExUnit
+- **Containerization**: Docker (likely required for challenge)
+
+## Code Style Preferences
+- Follow Elixir conventions (snake_case, etc.)
+- Use pattern matching extensively
+- Prefer functional approaches
+- Write clear, readable code with appropriate comments for learning
+- Use proper error handling with {:ok, result} | {:error, reason} patterns
+
+## Commands to Remember
+- `mix new project_name` - Create new project
+- `mix deps.get` - Install dependencies
+- `mix test` - Run tests
+- `mix phx.server` - Start Phoenix server (if using Phoenix)
+- `iex -S mix` - Start interactive Elixir shell with project loaded
+
+## Challenge Requirements (Rinha de Backend 2025)
+**Goal**: Build a payment processing intermediary that maximizes profit by intelligently routing between two processors
+
+**Key APIs to implement**:
+- `POST /payments` - Process payment requests (correlationId + amount)
+- `GET /payments-summary` - Return processing statistics with optional timestamp filter
+
+**Architecture Constraints**:
+- At least 2 web server instances with load balancing
+- Expose endpoints on port 9999
+- Docker Compose deployment
+- Resource limits: 1.5 CPU, 350MB memory total
+- Linux-amd64 images, bridge network mode
+
+**Payment Processor Strategy**:
+- Default processor (lower fees) vs Fallback processor
+- Health check monitoring and intelligent switching
+- Handle service instabilities gracefully
+- Maximize payments processed during outages
+
+**Scoring**:
+- Profit optimization (use lower-fee processor when possible)
+- Performance bonus (p99 response time)
+- Consistency penalties for payment record mismatches
+
+**Deadline**: August 17, 2025
+
+## Architecture Design
+
+**Core Components:**
+1. `PaymentProcessor.ProcessorMonitor` (GenServer) - Tracks processor health status
+2. `PaymentProcessor.PaymentRouter` - Routes payments to best available processor 
+3. `PaymentProcessor.ProcessorClient` - HTTP client for processor communication
+4. `PaymentProcessor.Payments` - Context for payment business logic
+5. `PaymentProcessorWeb.PaymentController` - API endpoints
+
+**Supervision Tree:**
+```
+Application
+├── Repo (Database)
+├── ProcessorMonitor (GenServer)
+└── Endpoint (Phoenix Web Server)
+```
+
+**Data Flow:**
+1. POST /payments → Controller validates → PaymentRouter selects processor
+2. ProcessorClient makes HTTP call → Store result in DB
+3. GET /payments-summary → Query DB for aggregated results
+
+## Documentation Process
+**Interaction History**: Update `CLAUDE_CODE_INTERACTIONS_HISTORY.md` after significant milestones
+- Format: Date - Brief Description, Context (one-line), Action (what was done), Learning (key concept)
+- Focus on learning outcomes and major implementation steps
+- Keep entries minimal but informative for future reference
+
+## Challenge Preparation Notes
+- Performance will likely be a key metric (p99 response times)
+- Database optimization may be crucial for payment tracking
+- Proper error handling and processor failover logic
+- Docker configuration for deployment with strict resource limits
+- Load testing preparation for payment processing under load
