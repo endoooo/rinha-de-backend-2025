@@ -51,3 +51,8 @@
 **Context**: 5068 payments inconsistencies causing test failures, 64.5% failure rate with database-first approach
 **Action**: Implemented fast in-memory deduplication using ETS table, restored async DB writes for performance, GenServer-based deduplication cache with atomic check-and-mark
 **Learning**: Database-first consistency creates massive performance bottleneck (4s+ response times), ETS provides microsecond-level atomic operations, in-memory deduplication preserves both consistency and performance
+
+### 2025-08-11 - Consistency & Timestamp Synchronization Attempts
+**Context**: Exploring different consistency approaches and timestamp synchronization between DB and processors
+**Action**: Experimented with database-first approach (pre-insert payments), sync vs async DB operations, fixed schema/migration mismatches (UUID primary keys), identified timestamp inconsistencies between local and processor times
+**Learning**: Multi-stage consistency approaches create more bottlenecks, schema/migration alignment critical for proper UUID handling, processor timestamp synchronization needed for accurate summary filtering

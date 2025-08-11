@@ -16,6 +16,9 @@ defmodule PaymentProcessor.Repo.Migrations.CreatePayments do
 
     create unique_index(:payments, [:correlation_id])
     create index(:payments, [:processed_at])
-    create index(:payments, [:processor_used])
+
+    # Add composite index for payments summary queries
+    create index(:payments, [:processor_used, :processed_at])
+    create index(:payments, [:status, :processed_at])
   end
 end
