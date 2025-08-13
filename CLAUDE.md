@@ -99,10 +99,21 @@ This is an Elixir application for the "Rinha de backend 2025" challenge. The foc
 4. `PaymentProcessor.Payments` - Context for payment business logic
 5. `PaymentProcessorWeb.PaymentController` - API endpoints
 
-**Data Flow:**
+**Current Data Flow (HTTP Coordinator Architecture):**
+1. POST /payments → API Controller validates → HTTP call to coordinator → immediate response
+2. Coordinator manages centralized ETS queue → processes payments in order → updates aggregated stats
+3. GET /payments-summary → HTTP call to coordinator → returns aggregated data
+
+**Previous Data Flow (Original Database Approach):**
 1. POST /payments → Controller validates → PaymentRouter selects processor
 2. ProcessorClient makes HTTP call → Store result in DB
 3. GET /payments-summary → Query DB for aggregated results
+
+**Architecture Status (Aug 13, 2025):**
+- ✅ 0 inconsistencies achieved with HTTP coordinator
+- ⚠️ Some timeout failures occurring (needs investigation)
+- 3-container setup: coordinator (200MB) + api1/api2 (150MB each) + nginx (20MB)
+- Production releases with BEAM VM tuning for resource efficiency
 
 ## Documentation Process
 **Interaction History**: Update `CLAUDE_CODE_INTERACTIONS_HISTORY.md` after significant milestones

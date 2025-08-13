@@ -8,6 +8,7 @@ defmodule PaymentProcessorWeb.Router do
   scope "/", PaymentProcessorWeb do
     pipe_through :api
 
+    get "/health", PaymentController, :health
     post "/payments", PaymentController, :create
     get "/payments-summary", PaymentController, :summary
   end

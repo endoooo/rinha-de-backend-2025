@@ -1,52 +1,33 @@
 defmodule PaymentProcessorWeb.PaymentController do
   use PaymentProcessorWeb, :controller
-  alias PaymentProcessor.{PaymentRouter, Payments, DeduplicationCache}
+  alias PaymentProcessor.CoordinatorClient
+
+  def health(conn, _params) do
+    json(conn, %{status: "ok", service: "payment_processor"})
+  end
 
   def create(conn, %{"correlationId" => correlation_id, "amount" => amount}) do
     with {:ok, uuid} <- validate_uuid(correlation_id),
          {:ok, decimal_amount} <- validate_amount(amount) do
-      # Check for duplicates using fast in-memory cache
-      case DeduplicationCache.check_and_mark(uuid) do
-        :ok ->
-          # Process payment first, then record asynchronously
-          requested_at = DateTime.utc_now()
+      # Send payment to coordinator for queuing and processing
+      requested_at = DateTime.utc_now()
+      
+      case CoordinatorClient.enqueue_payment(uuid, decimal_amount, requested_at) do
+        {:ok, :queued} ->
+          # Return success immediately after queuing
+          conn
+          |> put_status(:created)
+          |> json(%{status: "success"})
 
-          case PaymentRouter.route_payment(uuid, decimal_amount, requested_at) do
-            {:ok, processor_used, _response} ->
-              payment_attrs = %{
-                correlation_id: uuid,
-                amount: decimal_amount,
-                processor_used: Atom.to_string(processor_used),
-                status: "success",
-                processed_at: requested_at
-              }
-
-              # Record payment asynchronously to avoid blocking response
-              spawn(fn ->
-                case Payments.create_payment(payment_attrs) do
-                  {:ok, _payment} ->
-                    :ok
-
-                  {:error, changeset} ->
-                    require Logger
-                    Logger.error("Failed to record payment: #{inspect(changeset)}")
-                end
-              end)
-
-              conn
-              |> put_status(:created)
-              |> json(%{status: "success"})
-
-            {:error, _reason} ->
-              conn
-              |> put_status(:service_unavailable)
-              |> json(%{error: "Payment processing failed"})
-          end
-
-        :duplicate ->
+        {:error, :duplicate} ->
           conn
           |> put_status(:conflict)
           |> json(%{error: "Payment with this correlation ID already exists"})
+
+        {:error, _reason} ->
+          conn
+          |> put_status(:service_unavailable)
+          |> json(%{error: "Payment processing service unavailable"})
       end
     else
       {:error, :invalid_uuid} ->
@@ -58,16 +39,6 @@ defmodule PaymentProcessorWeb.PaymentController do
         conn
         |> put_status(:bad_request)
         |> json(%{error: "Invalid amount"})
-
-      {:error, :no_processors_available} ->
-        conn
-        |> put_status(:service_unavailable)
-        |> json(%{error: "No payment processors available"})
-
-      {:error, _reason} ->
-        conn
-        |> put_status(:internal_server_error)
-        |> json(%{error: "Payment processing failed"})
     end
   end
 
@@ -80,8 +51,14 @@ defmodule PaymentProcessorWeb.PaymentController do
   def summary(conn, params) do
     with {:ok, from_ts} <- parse_optional_timestamp(Map.get(params, "from")),
          {:ok, to_ts} <- parse_optional_timestamp(Map.get(params, "to")) do
-      summary = Payments.get_payments_summary(from_ts, to_ts)
-      json(conn, summary)
+      case CoordinatorClient.get_payments_summary(from_ts, to_ts) do
+        {:ok, summary} ->
+          json(conn, summary)
+        {:error, _reason} ->
+          conn
+          |> put_status(:service_unavailable)
+          |> json(%{error: "Summary service unavailable"})
+      end
     else
       {:error, :invalid_timestamp} ->
         conn
@@ -91,9 +68,12 @@ defmodule PaymentProcessorWeb.PaymentController do
   end
 
   defp validate_uuid(correlation_id) when is_binary(correlation_id) do
-    case Ecto.UUID.cast(correlation_id) do
-      {:ok, uuid} -> {:ok, uuid}
-      :error -> {:error, :invalid_uuid}
+    # Simple UUID validation using regex
+    uuid_regex = ~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if Regex.match?(uuid_regex, correlation_id) do
+      {:ok, correlation_id}
+    else
+      {:error, :invalid_uuid}
     end
   end
 

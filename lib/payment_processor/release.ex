@@ -1,25 +1,20 @@
 defmodule PaymentProcessor.Release do
   @moduledoc """
-  Used for executing DB release tasks when run in production without Mix
-  installed.
+  Used for executing release tasks when run in production without Mix
+  installed. No database migrations needed with ETS-based storage.
   """
   @app :payment_processor
 
   def migrate do
+    # No database migrations needed with ETS storage
     load_app()
-
-    for repo <- repos() do
-      {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :up, all: true))
-    end
+    :ok
   end
 
-  def rollback(repo, version) do
+  def rollback(_repo, _version) do
+    # No database rollbacks needed with ETS storage
     load_app()
-    {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :down, to: version))
-  end
-
-  defp repos do
-    Application.fetch_env!(@app, :ecto_repos)
+    :ok
   end
 
   defp load_app do

@@ -7,43 +7,21 @@ defmodule PaymentProcessor.Application do
 
   @impl true
   def start(_type, _args) do
+    # Build Finch pools dynamically at runtime
+    finch_pools = build_finch_pools()
+    
+    # Log coordinator configuration
+    require Logger
+    Logger.info("Starting API instance with coordinator URL: #{coordinator_url()}")
+    
     children = [
       PaymentProcessorWeb.Telemetry,
-      PaymentProcessor.Repo,
-      {Finch,
-       name: PaymentProcessor.ProcessorClient,
-       pools: %{
-         "http://payment-processor-default:8080" => [
-           size: 50,
-           count: 2,
-           conn_opts: [
-             transport_opts: [
-               inet6: false,
-               nodelay: true,
-               keepalive: true
-             ]
-           ],
-           conn_max_idle_time: 60_000
-         ],
-         "http://payment-processor-fallback:8080" => [
-           size: 50,
-           count: 2,
-           conn_opts: [
-             transport_opts: [
-               inet6: false,
-               nodelay: true,
-               keepalive: true
-             ]
-           ],
-           conn_max_idle_time: 60_000
-         ]
-       }},
-      PaymentProcessor.ProcessorMonitor,
-      PaymentProcessor.DeduplicationCache,
+      # HTTP client for coordinator communication
+      {Finch, name: PaymentProcessor.ProcessorClient, pools: finch_pools},
+      # Health check for coordinator connectivity
+      PaymentProcessor.CoordinatorHealthCheck,
       {DNSCluster, query: Application.get_env(:payment_processor, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: PaymentProcessor.PubSub},
-      # Start a worker by calling: PaymentProcessor.Worker.start_link(arg)
-      # {PaymentProcessor.Worker, arg},
       # Start to serve requests, typically the last entry
       PaymentProcessorWeb.Endpoint
     ]
@@ -60,5 +38,28 @@ defmodule PaymentProcessor.Application do
   def config_change(changed, _new, removed) do
     PaymentProcessorWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp coordinator_url do
+    System.get_env("COORDINATOR_URL", "http://localhost:8080")
+  end
+
+  defp build_finch_pools do
+    coordinator_url = coordinator_url()
+    
+    %{
+      coordinator_url => [
+        size: 20,
+        count: 2,
+        conn_opts: [
+          transport_opts: [
+            inet6: false,
+            nodelay: true,
+            keepalive: true
+          ]
+        ],
+        conn_max_idle_time: 30_000
+      ]
+    }
   end
 end

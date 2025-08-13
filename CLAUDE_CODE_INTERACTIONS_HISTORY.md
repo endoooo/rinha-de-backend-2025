@@ -56,3 +56,8 @@
 **Context**: Exploring different consistency approaches and timestamp synchronization between DB and processors
 **Action**: Experimented with database-first approach (pre-insert payments), sync vs async DB operations, fixed schema/migration mismatches (UUID primary keys), identified timestamp inconsistencies between local and processor times
 **Learning**: Multi-stage consistency approaches create more bottlenecks, schema/migration alignment critical for proper UUID handling, processor timestamp synchronization needed for accurate summary filtering
+
+### 2025-08-13 - HTTP Coordinator Architecture & Production Fixes
+**Context**: Zero failed requests but massive inconsistencies due to separate ETS tables per container, user rejected Redis/PostgreSQL/single-instance solutions
+**Action**: Replaced distributed ETS with HTTP-based coordinator service (3-container architecture), implemented proper Elixir releases for production deployment, fixed memory allocation issues (OOM crashes), added health checks and startup sequencing
+**Learning**: Container isolation prevents ETS sharing between instances, HTTP coordination solves consistency without external dependencies, production releases crucial for memory efficiency vs development mode, BEAM VM tuning essential for resource-constrained deployments

@@ -20,7 +20,7 @@ RUN mix compile && \
 # Runtime stage - subject to resource constraints
 FROM alpine:3.18 AS runtime
 
-RUN apk add --no-cache libgcc libstdc++ ncurses-libs
+RUN apk add --no-cache libgcc libstdc++ ncurses-libs curl
 
 WORKDIR /app
 

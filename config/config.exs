@@ -8,7 +8,6 @@
 import Config
 
 config :payment_processor,
-  ecto_repos: [PaymentProcessor.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # Configures the endpoint
