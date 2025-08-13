@@ -14,7 +14,7 @@ defmodule QueueCoordinator.QueueManager do
   end
 
   def enqueue_payment(correlation_id, amount, requested_at) do
-    GenServer.call(__MODULE__, {:enqueue_payment, correlation_id, amount, requested_at})
+    GenServer.cast(__MODULE__, {:enqueue_payment, correlation_id, amount, requested_at})
   end
 
   def get_status do
@@ -41,13 +41,13 @@ defmodule QueueCoordinator.QueueManager do
     ])
     
     # Start processing
-    send(self(), :process_next)
+    send(self(), :process_batch)
     
-    {:ok, %{processing: false}}
+    {:ok, %{processing: false, active_workers: 0, max_workers: 6}}
   end
 
   @impl true
-  def handle_call({:enqueue_payment, correlation_id, amount, requested_at}, _from, state) do
+  def handle_cast({:enqueue_payment, correlation_id, amount, requested_at}, state) do
     # Check for duplicates
     case :ets.insert_new(@dedup_table, {correlation_id, true}) do
       true ->
@@ -55,14 +55,22 @@ defmodule QueueCoordinator.QueueManager do
         timestamp = :os.system_time(:microsecond)
         :ets.insert(@queue_table, {timestamp, {correlation_id, amount, requested_at}})
         
-        # Trigger processing if not already processing
+        # Trigger batch processing if not already processing
         if not state.processing do
-          send(self(), :process_next)
+          send(self(), :process_batch)
         end
         
-        {:reply, :ok, state}
+        {:noreply, state}
       false ->
-        {:reply, {:error, :duplicate}, state}
+        # Still enqueue duplicate to maintain order, but mark as duplicate
+        timestamp = :os.system_time(:microsecond)
+        :ets.insert(@queue_table, {timestamp, {:duplicate, correlation_id, amount, requested_at}})
+        
+        if not state.processing do
+          send(self(), :process_batch)
+        end
+        
+        {:noreply, state}
     end
   end
 
@@ -71,40 +79,87 @@ defmodule QueueCoordinator.QueueManager do
     queue_size = :ets.info(@queue_table, :size)
     status = %{
       queue_size: queue_size,
-      processing: state.processing
+      processing: state.processing,
+      active_workers: state.active_workers,
+      max_workers: state.max_workers
     }
     {:reply, status, state}
   end
 
   @impl true
-  def handle_info(:process_next, state) do
-    case get_next_payment() do
-      nil ->
-        # No payments to process
+  def handle_info(:process_batch, state) do
+    # Get available worker slots
+    available_slots = state.max_workers - state.active_workers
+    
+    if available_slots > 0 do
+      batch = get_next_batch(min(available_slots, 4))  # Process up to 4 at once
+      
+      if Enum.empty?(batch) do
+        # No work to do
+        Process.send_after(self(), :process_batch, 50)  # Check again in 50ms
         {:noreply, %{state | processing: false}}
+      else
+        # Start concurrent workers for batch
+        new_workers = Enum.count(batch)
         
-      {timestamp, {correlation_id, amount, requested_at}} ->
-        # Remove from queue
-        :ets.delete(@queue_table, timestamp)
+        Enum.each(batch, fn {timestamp, payment} ->
+          Task.Supervisor.start_child(QueueCoordinator.TaskSupervisor, fn ->
+            process_payment_concurrent(timestamp, payment)
+            # Notify completion
+            GenServer.cast(__MODULE__, :worker_completed)
+          end)
+        end)
         
-        # Process payment
-        process_payment(correlation_id, amount, requested_at)
-        
-        # Schedule next processing
-        send(self(), :process_next)
-        {:noreply, %{state | processing: true}}
+        # Continue processing
+        send(self(), :process_batch)
+        {:noreply, %{state | processing: true, active_workers: state.active_workers + new_workers}}
+      end
+    else
+      # All workers busy, check again shortly
+      Process.send_after(self(), :process_batch, 10)
+      {:noreply, state}
     end
   end
+  
+  @impl true
+  def handle_cast(:worker_completed, state) do
+    new_active_workers = max(0, state.active_workers - 1)
+    
+    # Trigger more processing if queue has items
+    if new_active_workers < state.max_workers and :ets.info(@queue_table, :size) > 0 do
+      send(self(), :process_batch)
+    end
+    
+    {:noreply, %{state | active_workers: new_active_workers}}
+  end
 
-  defp get_next_payment do
+  defp get_next_batch(count) do
+    get_next_batch(count, [])
+  end
+  
+  defp get_next_batch(0, acc), do: Enum.reverse(acc)
+  defp get_next_batch(count, acc) do
     case :ets.first(@queue_table) do
-      :"$end_of_table" -> nil
+      :"$end_of_table" -> 
+        Enum.reverse(acc)
       timestamp -> 
         case :ets.lookup(@queue_table, timestamp) do
-          [{^timestamp, payment}] -> {timestamp, payment}
-          [] -> nil  # Race condition, already deleted
+          [{^timestamp, payment}] -> 
+            :ets.delete(@queue_table, timestamp)
+            get_next_batch(count - 1, [{timestamp, payment} | acc])
+          [] -> 
+            # Race condition, try again
+            get_next_batch(count, acc)
         end
     end
+  end
+  
+  defp process_payment_concurrent(timestamp, {:duplicate, correlation_id, _amount, _requested_at}) do
+    Logger.debug("Skipping duplicate payment: #{correlation_id}")
+  end
+  
+  defp process_payment_concurrent(_timestamp, {correlation_id, amount, requested_at}) do
+    process_payment(correlation_id, amount, requested_at)
   end
 
   defp process_payment(correlation_id, amount, requested_at) do
@@ -162,7 +217,7 @@ defmodule QueueCoordinator.QueueManager do
     headers = [{"content-type", "application/json"}]
     request = Finch.build(:post, "#{url}/payments", headers, body)
     
-    case Finch.request(request, QueueCoordinator.HTTPClient, receive_timeout: 3000) do
+    case Finch.request(request, QueueCoordinator.HTTPClient, receive_timeout: 2000) do
       {:ok, %Finch.Response{status: status}} when status in 200..299 ->
         {:ok, :success}
       {:ok, %Finch.Response{status: status}} ->

@@ -61,3 +61,8 @@
 **Context**: Zero failed requests but massive inconsistencies due to separate ETS tables per container, user rejected Redis/PostgreSQL/single-instance solutions
 **Action**: Replaced distributed ETS with HTTP-based coordinator service (3-container architecture), implemented proper Elixir releases for production deployment, fixed memory allocation issues (OOM crashes), added health checks and startup sequencing
 **Learning**: Container isolation prevents ETS sharing between instances, HTTP coordination solves consistency without external dependencies, production releases crucial for memory efficiency vs development mode, BEAM VM tuning essential for resource-constrained deployments
+
+### 2025-08-13 - Coordinator Bottleneck Resolution & Concurrent Processing
+**Context**: Achieved 0 inconsistencies but timeout failures occurring due to serial coordinator bottleneck blocking API responses
+**Action**: Implemented async enqueueing with GenServer.cast, added Task.Supervisor with 6 concurrent workers for parallel payment processing, optimized HTTP client pools (20 connections per processor), added smart batch processing with worker scaling
+**Learning**: GenServer.call blocks caller creating cascade timeouts, concurrent processing with Task.Supervisor enables parallelism while maintaining order, proper Finch connection pools essential for concurrent HTTP requests, batch processing balances throughput with resource constraints

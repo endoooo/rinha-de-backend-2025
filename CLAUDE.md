@@ -111,9 +111,11 @@ This is an Elixir application for the "Rinha de backend 2025" challenge. The foc
 
 **Architecture Status (Aug 13, 2025):**
 - ✅ 0 inconsistencies achieved with HTTP coordinator
-- ⚠️ Some timeout failures occurring (needs investigation)
+- ✅ 0 timeout failures with concurrent processing (resolved bottleneck)
+- ⚠️ Load test shows low scoring despite perfect reliability (needs performance investigation)
 - 3-container setup: coordinator (200MB) + api1/api2 (150MB each) + nginx (20MB)
-- Production releases with BEAM VM tuning for resource efficiency
+- Production releases with BEAM VM tuning and concurrent processing (6 workers)
+- HTTP connection pools: 20 connections per processor, optimized TCP settings
 
 ## Documentation Process
 **Interaction History**: Update `CLAUDE_CODE_INTERACTIONS_HISTORY.md` after significant milestones

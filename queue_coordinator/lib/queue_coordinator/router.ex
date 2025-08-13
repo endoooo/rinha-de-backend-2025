@@ -19,15 +19,9 @@ defmodule QueueCoordinator.Router do
       
       requested_at = DateTime.utc_now()
       
-      case QueueCoordinator.QueueManager.enqueue_payment(correlation_id, decimal_amount, requested_at) do
-        :ok ->
-          send_resp(conn, 201, Jason.encode!(%{status: "queued"}))
-        {:error, :duplicate} ->
-          send_resp(conn, 409, Jason.encode!(%{error: "Payment with this correlation ID already exists"}))
-        {:error, reason} ->
-          Logger.error("Failed to enqueue payment: #{inspect(reason)}")
-          send_resp(conn, 500, Jason.encode!(%{error: "Failed to enqueue payment"}))
-      end
+      # Enqueue payment asynchronously - always returns immediately
+      :ok = QueueCoordinator.QueueManager.enqueue_payment(correlation_id, decimal_amount, requested_at)
+      send_resp(conn, 201, Jason.encode!(%{status: "queued"}))
     else
       {:error, :invalid_amount} ->
         send_resp(conn, 400, Jason.encode!(%{error: "Invalid amount"}))

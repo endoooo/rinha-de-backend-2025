@@ -18,11 +18,9 @@ defmodule PaymentProcessor.CoordinatorClient do
     headers = [{"content-type", "application/json"}]
     request = Finch.build(:post, "#{coordinator_url()}/enqueue-payment", headers, body)
 
-    case Finch.request(request, PaymentProcessor.ProcessorClient, receive_timeout: 5_000) do
+    case Finch.request(request, PaymentProcessor.ProcessorClient, receive_timeout: 2_000) do
       {:ok, %Finch.Response{status: 201}} ->
         {:ok, :queued}
-      {:ok, %Finch.Response{status: 409}} ->
-        {:error, :duplicate}
       {:ok, %Finch.Response{status: status, body: body}} ->
         Logger.warning("Coordinator returned error: #{status}, #{body}")
         {:error, {:coordinator_error, status}}
