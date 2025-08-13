@@ -1,9 +1,9 @@
 defmodule PaymentProcessor do
   @moduledoc """
-  PaymentProcessor keeps the contexts that define your domain
-  and business logic.
+  PaymentProcessor - High-performance payment processing intermediary
+  for the Rinha de Backend 2025 challenge.
 
-  Contexts are also responsible for managing your data, regardless
-  if it comes from the database, an external API or others.
+  Uses lightweight HTTP server with coordinator-based architecture
+  for optimal throughput and zero inconsistencies.
   """
 end

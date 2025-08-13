@@ -66,3 +66,18 @@
 **Context**: Achieved 0 inconsistencies but timeout failures occurring due to serial coordinator bottleneck blocking API responses
 **Action**: Implemented async enqueueing with GenServer.cast, added Task.Supervisor with 6 concurrent workers for parallel payment processing, optimized HTTP client pools (20 connections per processor), added smart batch processing with worker scaling
 **Learning**: GenServer.call blocks caller creating cascade timeouts, concurrent processing with Task.Supervisor enables parallelism while maintaining order, proper Finch connection pools essential for concurrent HTTP requests, batch processing balances throughput with resource constraints
+
+### 2025-08-13 - Phoenix Framework Removal & Performance Regression Analysis
+**Context**: User removed Phoenix framework expecting performance gains but throughput dropped from $191K to $120K despite better p99 latency (1.5s → 392ms)
+**Action**: Analyzed HTTP coordinator bottleneck as root cause, discovered distributed Erlang clustering as solution for direct GenServer communication across containers without HTTP overhead
+**Learning**: Phoenix removal wasn't the bottleneck - HTTP coordinator communication was, distributed Erlang enables direct inter-node GenServer calls for maximum performance
+
+### 2025-08-13 - Distributed Erlang Implementation & Docker Networking Resolution
+**Context**: User insisted on no-Phoenix approach while solving coordinator bottleneck, constraint was achieving shared ETS consistency across separate containers without shared processes
+**Action**: Implemented complete distributed Erlang clustering (Node.connect, ERL_COOKIE, EPMD), created DistributedCoordinatorClient for direct GenServer.cast calls, resolved Docker networking issues (coordinator@coordinator vs queue_coordinator@coordinator node names), fixed payment processing network connectivity
+**Learning**: Distributed Erlang clustering enables direct GenServer communication across Docker containers, node name consistency critical for cluster formation, external Docker networks required for payment processor connectivity
+
+### 2025-08-13 - Performance Crisis & Debug Logging Cleanup
+**Context**: User reported "performance is veeery bad right now (crying...)" after distributed Erlang implementation was supposed to be best solution yet
+**Action**: Identified and removed all performance-killing debug logs (batch processing spam every 50ms, verbose per-payment logs, HTTP request logging), rebuilt coordinator container with optimized code
+**Learning**: Debug logging can create massive performance overhead (50ms intervals), production systems require minimal logging for optimal performance, distributed Erlang benefits only realized when overhead removed

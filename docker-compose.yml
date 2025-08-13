@@ -5,7 +5,9 @@ services:
     environment:
       MIX_ENV: prod
       ERL_MAX_PORTS: 2048
-      ELIXIR_ERL_OPTIONS: "+K true +A 4"
+      ELIXIR_ERL_OPTIONS: "+K true +A 4 -kernel inet_dist_listen_min 9100 inet_dist_listen_max 9100"
+      ERL_COOKIE: "rinha_cluster_cookie"
+      ERL_EPMD_PORT: 4369
     networks:
       - payment-processor
     deploy:
@@ -30,7 +32,9 @@ services:
       MIX_ENV: prod
       PHX_SERVER: true
       ERL_MAX_PORTS: 2048
-      ELIXIR_ERL_OPTIONS: "+K true +A 4"
+      ELIXIR_ERL_OPTIONS: "+K true +A 4 -kernel inet_dist_listen_min 9101 inet_dist_listen_max 9101"
+      ERL_COOKIE: "rinha_cluster_cookie"
+      NODE_NAME: "api1"
       COORDINATOR_URL: "http://coordinator:8080"
     depends_on:
       coordinator:
@@ -59,7 +63,9 @@ services:
       MIX_ENV: prod
       PHX_SERVER: true
       ERL_MAX_PORTS: 2048
-      ELIXIR_ERL_OPTIONS: "+K true +A 4"
+      ELIXIR_ERL_OPTIONS: "+K true +A 4 -kernel inet_dist_listen_min 9102 inet_dist_listen_max 9102"
+      ERL_COOKIE: "rinha_cluster_cookie"
+      NODE_NAME: "api2"
       COORDINATOR_URL: "http://coordinator:8080"
     depends_on:
       coordinator:

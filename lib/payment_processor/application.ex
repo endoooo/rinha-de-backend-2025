@@ -7,23 +7,23 @@ defmodule PaymentProcessor.Application do
 
   @impl true
   def start(_type, _args) do
-    # Build Finch pools dynamically at runtime
+    # Configure distributed Erlang node
+    setup_distributed_node()
+    
+    # Build Finch pools dynamically at runtime  
     finch_pools = build_finch_pools()
     
     # Log coordinator configuration
     require Logger
-    Logger.info("Starting API instance with coordinator URL: #{coordinator_url()}")
+    Logger.info("Starting API instance #{node_name()} with coordinator: #{coordinator_node()}")
     
     children = [
-      PaymentProcessorWeb.Telemetry,
-      # HTTP client for coordinator communication
+      # HTTP client for coordinator communication (backup)
       {Finch, name: PaymentProcessor.ProcessorClient, pools: finch_pools},
-      # Health check for coordinator connectivity
+      # Health check for coordinator connectivity  
       PaymentProcessor.CoordinatorHealthCheck,
-      {DNSCluster, query: Application.get_env(:payment_processor, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: PaymentProcessor.PubSub},
-      # Start to serve requests, typically the last entry
-      PaymentProcessorWeb.Endpoint
+      # Lightweight HTTP server (replaces Phoenix)
+      {PaymentProcessor.HTTPServer, port: get_port()}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
@@ -32,12 +32,53 @@ defmodule PaymentProcessor.Application do
     Supervisor.start_link(children, opts)
   end
 
-  # Tell Phoenix to update the endpoint configuration
-  # whenever the application is updated.
-  @impl true
-  def config_change(changed, _new, removed) do
-    PaymentProcessorWeb.Endpoint.config_change(changed, removed)
-    :ok
+  defp get_port do
+    System.get_env("PORT", "9999") |> String.to_integer()
+  end
+  
+  defp setup_distributed_node do
+    # Start distributed Erlang node
+    case Node.start(node_name()) do
+      {:ok, _} -> 
+        require Logger
+        Logger.info("Started distributed node: #{Node.self()}")
+      {:error, {:already_started, _}} -> 
+        require Logger
+        Logger.info("Distributed node already running: #{Node.self()}")
+      {:error, reason} ->
+        require Logger
+        Logger.warning("Failed to start distributed node: #{inspect(reason)}")
+    end
+    
+    # Set up node cookie for cluster security
+    cookie = System.get_env("ERL_COOKIE", "rinha_cluster_cookie")
+    Node.set_cookie(String.to_atom(cookie))
+    
+    # Attempt to connect to coordinator
+    connect_to_coordinator()
+  end
+  
+  defp connect_to_coordinator do
+    coordinator = coordinator_node()
+    case Node.connect(coordinator) do
+      true ->
+        require Logger
+        Logger.info("Connected to coordinator node: #{coordinator}")
+      false ->
+        require Logger
+        Logger.warning("Failed to connect to coordinator node: #{coordinator}")
+        # Retry connection after a delay
+        Process.send_after(self(), :retry_coordinator_connection, 5000)
+    end
+  end
+  
+  defp node_name do
+    hostname = System.get_env("NODE_NAME", "api")
+    String.to_atom("#{hostname}@#{hostname}")
+  end
+  
+  defp coordinator_node do
+    String.to_atom("queue_coordinator@coordinator")
   end
 
   defp coordinator_url do

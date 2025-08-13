@@ -7,6 +7,9 @@ defmodule QueueCoordinator.Application do
 
   @impl true
   def start(_type, _args) do
+    # Configure distributed Erlang node
+    setup_distributed_node()
+    
     children = [
       # HTTP client for making requests to payment processors with optimized pools
       {Finch, name: QueueCoordinator.HTTPClient, pools: build_finch_pools()},
@@ -15,14 +18,34 @@ defmodule QueueCoordinator.Application do
       # Queue storage and processing
       QueueCoordinator.QueueManager,
       QueueCoordinator.Storage,
-      # HTTP server
+      # HTTP server (backup for health checks)
       {Plug.Cowboy, scheme: :http, plug: QueueCoordinator.Router, options: [port: 8080]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: QueueCoordinator.Supervisor]
+    
     Supervisor.start_link(children, opts)
+  end
+  
+  defp setup_distributed_node do
+    # Start distributed Erlang if not already started
+    case Node.start(:"coordinator@coordinator") do
+      {:ok, _} -> 
+        require Logger
+        Logger.info("Started distributed node: #{Node.self()}")
+      {:error, {:already_started, _}} -> 
+        require Logger
+        Logger.info("Distributed node already running: #{Node.self()}")
+      {:error, reason} ->
+        require Logger
+        Logger.warning("Failed to start distributed node: #{inspect(reason)}")
+    end
+    
+    # Set up node cookie for cluster security
+    cookie = System.get_env("ERL_COOKIE", "rinha_cluster_cookie")
+    Node.set_cookie(String.to_atom(cookie))
   end
   
   defp build_finch_pools do

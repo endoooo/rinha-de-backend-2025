@@ -1,0 +1,56 @@
+last results (without Phoenix, without HTTP, distributed erlang)
+
+data_received..................: 3.3 MB    54 kB/s
+data_sent......................: 3.1 MB    50 kB/s
+default_total_amount...........: 200771.1  3249.776744/s
+default_total_fee..............: 10038.555 162.488837/s
+default_total_requests.........: 10089     163.305364/s
+fallback_total_amount..........: 11462.4   185.535871/s
+fallback_total_fee.............: 1719.36   27.830381/s
+fallback_total_requests........: 576       9.323411/s
+http_req_blocked...............: p(99)=432.41µs count=15259
+http_req_connecting............: p(99)=324µs    count=15259
+http_req_duration..............: p(99)=12.25ms  count=15259
+  { expected_response:true }...: p(99)=12.25ms  count=15258
+http_req_failed................: 0.00%     ✓ 1           ✗ 15258
+http_req_receiving.............: p(99)=182.41µs count=15259
+http_req_sending...............: p(99)=258.41µs count=15259
+http_req_tls_handshaking.......: p(99)=0s       count=15259
+http_req_waiting...............: p(99)=11.85ms  count=15259
+http_reqs......................: 15259     246.989449/s
+iteration_duration.............: p(99)=1.01s    count=15221
+iterations.....................: 15221     246.374363/s
+payments_inconsistency.........: 0         0/s
+total_transactions_amount......: 212233.5  3435.312615/s
+transactions_failure...........: 0         0/s
+transactions_success...........: 15209     246.180125/s
+vus............................: 267       min=5         max=496
+
+
+results for commit c8f75fdb29c0dd1b2fad07244116feaa570549dc (best version yet - Phoenix with inconsistencies)
+
+data_received..................: 3.5 MB   57 kB/s
+data_sent......................: 2.5 MB   42 kB/s
+default_total_amount...........: 196472.7 3201.788936/s
+default_total_fee..............: 9823.635 160.089447/s
+default_total_requests.........: 9873     160.893916/s
+fallback_total_amount..........: 38864.7  633.352962/s
+fallback_total_fee.............: 5829.705 95.002944/s
+fallback_total_requests........: 1953     31.826782/s
+http_req_blocked...............: p(99)=658.41µs count=12659
+http_req_connecting............: p(99)=433µs    count=12659
+http_req_duration..............: p(99)=1.5s     count=12659
+  { expected_response:true }...: p(99)=488.22ms count=11480
+http_req_failed................: 9.31%    ✓ 1179        ✗ 11480
+http_req_receiving.............: p(99)=232.41µs count=12659
+http_req_sending...............: p(99)=333µs    count=12659
+http_req_tls_handshaking.......: p(99)=0s       count=12659
+http_req_waiting...............: p(99)=1.5s     count=12659
+http_reqs......................: 12659    206.295562/s
+iteration_duration.............: p(99)=2.5s     count=12621
+iterations.....................: 12621    205.676301/s
+payments_inconsistency.........: 697      11.35856/s
+total_transactions_amount......: 235337.4 3835.141897/s
+transactions_failure...........: 1178     19.197107/s
+transactions_success...........: 11431    186.283638/s
+vus............................: 111      min=7         max=498

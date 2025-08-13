@@ -48,6 +48,8 @@ defmodule QueueCoordinator.QueueManager do
 
   @impl true
   def handle_cast({:enqueue_payment, correlation_id, amount, requested_at}, state) do
+    Logger.info("Received distributed payment enqueue: #{correlation_id}, amount: #{amount}")
+    
     # Check for duplicates
     case :ets.insert_new(@dedup_table, {correlation_id, true}) do
       true ->
@@ -163,8 +165,6 @@ defmodule QueueCoordinator.QueueManager do
   end
 
   defp process_payment(correlation_id, amount, requested_at) do
-    Logger.debug("Processing payment: #{correlation_id}")
-    
     case route_payment(correlation_id, amount, requested_at) do
       {:ok, processor_used} ->
         payment_data = %{
@@ -208,10 +208,19 @@ defmodule QueueCoordinator.QueueManager do
   defp make_payment_request(processor_type, correlation_id, amount, requested_at) do
     url = processor_url(processor_type)
     
+    # Handle different types of requested_at values
+    iso_timestamp = case requested_at do
+      %DateTime{} -> DateTime.to_iso8601(requested_at)
+      timestamp when is_binary(timestamp) -> timestamp
+      _ -> 
+        Logger.warning("Invalid requested_at format, using current time")
+        DateTime.to_iso8601(DateTime.utc_now())
+    end
+    
     body = Jason.encode!(%{
       correlationId: correlation_id,
       amount: amount,
-      requestedAt: DateTime.to_iso8601(requested_at)
+      requestedAt: iso_timestamp
     })
     
     headers = [{"content-type", "application/json"}]
@@ -223,6 +232,7 @@ defmodule QueueCoordinator.QueueManager do
       {:ok, %Finch.Response{status: status}} ->
         {:error, {:http_error, status}}
       {:error, reason} ->
+        Logger.error("Payment request network error to #{processor_type}: #{inspect(reason)}")
         {:error, {:network_error, reason}}
     end
   end

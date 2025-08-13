@@ -40,14 +40,11 @@ defmodule PaymentProcessor.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.8.0"},
-      {:phoenix_live_dashboard, "~> 0.8.3"},
-      {:telemetry_metrics, "~> 1.0"},
-      {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.26"},
-      {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.2.0"},
+      # HTTP server and JSON handling
       {:bandit, "~> 1.5"},
+      {:plug, "~> 1.15"},
+      {:jason, "~> 1.2"},
+      # HTTP client and numeric handling
       {:finch, "~> 0.16"},
       {:decimal, "~> 2.0"}
     ]
