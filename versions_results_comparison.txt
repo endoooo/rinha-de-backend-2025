@@ -1,28 +1,28 @@
-current version
+current version (best so far)
 data_received..................: 2.5 MB   40 kB/s
-data_sent......................: 3.1 MB   49 kB/s
-default_total_amount...........: 153966.3 2481.254131/s
-default_total_fee..............: 7698.315 124.062707/s
-default_total_requests.........: 7737     124.686137/s
-fallback_total_amount..........: 55620.5  896.355861/s
-fallback_total_fee.............: 8343.075 134.453379/s
-fallback_total_requests........: 2795     45.043008/s
-http_req_blocked...............: p(99)=520µs   count=15260
-http_req_connecting............: p(99)=421.4µs count=15260
-http_req_duration..............: p(99)=4.67ms  count=15260
-  { expected_response:true }...: p(99)=4.67ms  count=15259
-http_req_failed................: 0.00%    ✓ 1           ✗ 15259
-http_req_receiving.............: p(99)=85µs    count=15260
-http_req_sending...............: p(99)=83µs    count=15260
-http_req_tls_handshaking.......: p(99)=0s      count=15260
-http_req_waiting...............: p(99)=4.53ms  count=15260
-http_reqs......................: 15260    245.923543/s
-iteration_duration.............: p(99)=1s      count=15222
-iterations.....................: 15222    245.311152/s
+data_sent......................: 3.1 MB   50 kB/s
+default_total_amount...........: 230083.8 3717.704591/s
+default_total_fee..............: 11504.19 185.88523/s
+default_total_requests.........: 11562    186.819326/s
+fallback_total_amount..........: 10626.6  171.70509/s
+fallback_total_fee.............: 1593.99  25.755764/s
+fallback_total_requests........: 534      8.628396/s
+http_req_blocked...............: p(99)=532.37µs count=15263
+http_req_connecting............: p(99)=416.75µs count=15263
+http_req_duration..............: p(99)=5.33ms   count=15263
+  { expected_response:true }...: p(99)=5.33ms   count=15262
+http_req_failed................: 0.00%    ✓ 1           ✗ 15262
+http_req_receiving.............: p(99)=83µs     count=15263
+http_req_sending...............: p(99)=86µs     count=15263
+http_req_tls_handshaking.......: p(99)=0s       count=15263
+http_req_waiting...............: p(99)=5.26ms   count=15263
+http_reqs......................: 15263    246.620254/s
+iteration_duration.............: p(99)=1s       count=15225
+iterations.....................: 15225    246.006248/s
 payments_inconsistency.........: 0        0/s
-total_transactions_amount......: 209586.8 3377.609993/s
+total_transactions_amount......: 240710.4 3889.409681/s
 transactions_failure...........: 0        0/s
-transactions_success...........: 15210    245.117765/s
+transactions_success...........: 15213    245.812352/s
 vus............................: 0        min=0         max=499
 
 results for commit 7aef65b4e5126d58705a8e01528d01b4923c088a (no Phoenix, no HTTP, distributed erlang)
@@ -54,7 +54,7 @@ transactions_success...........: 15209     246.180125/s
 vus............................: 267       min=5         max=496
 
 
-results for commit c8f75fdb29c0dd1b2fad07244116feaa570549dc (best version yet - Phoenix with inconsistencies)
+results for commit c8f75fdb29c0dd1b2fad07244116feaa570549dc (2nd best version - Phoenix with inconsistencies)
 
 data_received..................: 3.5 MB   57 kB/s
 data_sent......................: 2.5 MB   42 kB/s

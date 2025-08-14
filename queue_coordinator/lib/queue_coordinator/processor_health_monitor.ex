@@ -26,7 +26,7 @@ defmodule QueueCoordinator.ProcessorHealthMonitor do
     schedule_health_check()
     
     initial_state = %{
-      default: %{failing: false, min_response_time: 0, consecutive_failures: 0},
+      # Only track fallback processor health - always try default first
       fallback: %{failing: false, min_response_time: 0, consecutive_failures: 0},
       last_check: DateTime.utc_now()
     }
@@ -62,16 +62,15 @@ defmodule QueueCoordinator.ProcessorHealthMonitor do
   end
 
   defp perform_health_checks(state) do
-    default_status = check_processor_health(:default)
+    # Only check fallback processor health - default always attempted first
     fallback_status = check_processor_health(:fallback)
     
     new_state = %{
-      default: update_processor_status(state.default, default_status),
       fallback: update_processor_status(state.fallback, fallback_status),
       last_check: DateTime.utc_now()
     }
     
-    Logger.debug("Health check results - Default: #{inspect(new_state.default)}, Fallback: #{inspect(new_state.fallback)}")
+    Logger.debug("Health check results - Fallback: #{inspect(new_state.fallback)} (default always attempted)")
     
     new_state
   end
@@ -131,21 +130,19 @@ defmodule QueueCoordinator.ProcessorHealthMonitor do
     end
   end
 
-  defp select_best_processor(state) do
-    # Competitor's logic: only use processors if they meet performance criteria
-    cond do
-      # Use default if: not failing AND response time <= 100ms
-      not state.default.failing and state.default.min_response_time <= 100 ->
-        {:ok, :default}
-        
-      # Use fallback if: not failing AND response time <= 50ms (stricter threshold)
-      not state.fallback.failing and state.fallback.min_response_time <= 50 ->
-        {:ok, :fallback}
-        
-      # Skip processing if both are slow/failing (better than using slow processor)
-      true ->
-        {:skip, :all_processors_slow}
-    end
+  defp select_best_processor(_state) do
+    # Always return default processor - fallback handled as backup in routing logic
+    {:ok, :default}
+  end
+
+  def is_fallback_available do
+    GenServer.call(__MODULE__, :is_fallback_available)
+  end
+
+  @impl true
+  def handle_call(:is_fallback_available, _from, state) do
+    available = not state.fallback.failing and state.fallback.min_response_time <= 50
+    {:reply, available, state}
   end
 
   defp processor_url(:default), do: "http://payment-processor-default:8080"

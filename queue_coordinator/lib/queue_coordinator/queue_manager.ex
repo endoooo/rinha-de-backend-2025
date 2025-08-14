@@ -191,25 +191,34 @@ defmodule QueueCoordinator.QueueManager do
   end
 
   defp route_payment(correlation_id, amount, requested_at) do
-    # Smart health-based processor selection (like competitor)
-    case QueueCoordinator.ProcessorHealthMonitor.get_best_processor() do
-      {:ok, processor_type} ->
-        Logger.info("Health monitor selected processor: #{processor_type} for payment #{correlation_id}")
-        case make_payment_request(processor_type, correlation_id, amount, requested_at) do
-          {:ok, _response} ->
-            Logger.info("Payment #{correlation_id} succeeded with #{processor_type}")
-            {:ok, to_string(processor_type)}
-          {:error, reason} ->
-            # Respect health monitor decision - no backup attempts
-            # Only use processors that pass health criteria
-            Logger.warning("Payment #{correlation_id} failed with #{processor_type}: #{inspect(reason)}")
-            {:error, reason}
-        end
+    # Always try default first, fallback only if default fails and fallback is healthy
+    Logger.warning("PROCESSOR_SELECTION: default (primary) for #{correlation_id}")
+    
+    case make_payment_request(:default, correlation_id, amount, requested_at) do
+      {:ok, _response} ->
+        Logger.warning("PAYMENT_SUCCESS: #{correlation_id} succeeded with default")
+        {:ok, "default"}
         
-      {:skip, :all_processors_slow} ->
-        # Skip processing when both processors are slow (better than using slow processor)
-        Logger.warning("Skipping payment #{correlation_id} - all processors too slow")
-        {:error, :all_processors_slow}
+      {:error, reason} ->
+        Logger.warning("DEFAULT_FAILED: #{correlation_id} failed with default: #{inspect(reason)}")
+        
+        # Try fallback only if it's healthy and fast
+        case QueueCoordinator.ProcessorHealthMonitor.is_fallback_available() do
+          true ->
+            Logger.warning("PROCESSOR_SELECTION: fallback (backup) for #{correlation_id}")
+            case make_payment_request(:fallback, correlation_id, amount, requested_at) do
+              {:ok, _response} ->
+                Logger.warning("PAYMENT_SUCCESS: #{correlation_id} succeeded with fallback")
+                {:ok, "fallback"}
+              {:error, fallback_reason} ->
+                Logger.warning("PAYMENT_FAILED: #{correlation_id} failed with both processors - default: #{inspect(reason)}, fallback: #{inspect(fallback_reason)}")
+                {:error, {:both_failed, reason, fallback_reason}}
+            end
+            
+          false ->
+            Logger.warning("PAYMENT_FAILED: #{correlation_id} - default failed and fallback unavailable")
+            {:error, {:default_failed_fallback_unavailable, reason}}
+        end
     end
   end
 

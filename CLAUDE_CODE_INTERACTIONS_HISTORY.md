@@ -96,3 +96,8 @@
 **Context**: Performance regressed badly (2813 vs 576 fallback requests), health monitor crashing with GenServer timeouts despite correct decision logic, retry mechanisms interfering with health-based routing decisions
 **Action**: Fixed ProcessorHealthMonitor crashes by optimizing Finch pool configuration (20 connections, single pool), completely removed retry logic implementing user's simple approach (single attempt per selected processor, no recovery mechanisms), added debug logging to verify health monitor compliance
 **Learning**: Health monitor stability critical for smart routing effectiveness, retry mechanisms can bypass health monitor decisions and increase expensive processor usage, simple single-attempt approach more reliable than complex retry strategies
+
+### 2025-08-14 - Default-First Strategy Implementation & Performance Breakthrough
+**Context**: Despite health monitor fixes, still had 2911 fallback requests due to health state flapping during load testing (default showing failing/slow, fallback showing 0ms), complex health-based selection causing suboptimal routing
+**Action**: Implemented user's default-first strategy: always try default processor first, only use fallback as true backup when default fails AND fallback is healthy (≤50ms), simplified health monitor to only track fallback processor, eliminated complex processor selection logic
+**Learning**: Simple default-first approach with backup fallback achieves optimal profit optimization, health monitor instability under load solved by not relying on default health checks, backup-only fallback usage minimizes expensive 15% fee processor while maintaining reliability
