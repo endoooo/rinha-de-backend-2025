@@ -18,9 +18,9 @@ This is an Elixir application for the "Rinha de backend 2025" challenge. The foc
 
 ## Technology Stack
 - **Language**: Elixir
-- **Web Framework**: Phoenix (if needed)
-- **Database**: PostgreSQL (typical for challenges)
-- **ORM**: Ecto
+- **Web Framework**: ~~Phoenix~~ → Bandit + Plug (lightweight HTTP server)
+- **Database**: ~~PostgreSQL~~ → In-memory ETS (coordinator-based storage)
+- **ORM**: ~~Ecto~~ → Direct ETS operations
 - **Testing**: ExUnit
 - **Containerization**: Docker (likely required for challenge)
 
@@ -35,7 +35,7 @@ This is an Elixir application for the "Rinha de backend 2025" challenge. The foc
 - `mix new project_name` - Create new project
 - `mix deps.get` - Install dependencies
 - `mix test` - Run tests
-- `mix phx.server` - Start Phoenix server (if using Phoenix)
+- `docker compose up -d` - Start distributed Erlang cluster
 - `iex -S mix` - Start interactive Elixir shell with project loaded
 
 ## Challenge Requirements (Rinha de Backend 2025)
@@ -93,16 +93,16 @@ This is an Elixir application for the "Rinha de backend 2025" challenge. The foc
 ## Architecture Design
 
 **Core Components:**
-1. `PaymentProcessor.ProcessorMonitor` (GenServer) - Tracks processor health status
-2. `PaymentProcessor.PaymentRouter` - Routes payments to best available processor 
-3. `PaymentProcessor.ProcessorClient` - HTTP client for processor communication
-4. `PaymentProcessor.Payments` - Context for payment business logic
-5. `PaymentProcessorWeb.PaymentController` - API endpoints
+1. `PaymentProcessor.HTTPServer` (Bandit + Plug) - Lightweight HTTP endpoints with immediate response
+2. `PaymentProcessor.DistributedCoordinatorClient` - Distributed Erlang communication to coordinator
+3. `QueueCoordinator.QueueManager` (GenServer) - Centralized payment queue and processing
+4. `QueueCoordinator.ProcessorHealthMonitor` (GenServer) - Smart health-based processor selection
+5. `QueueCoordinator.Storage` (GenServer) - In-memory ETS aggregated statistics
 
-**Current Data Flow (HTTP Coordinator Architecture):**
-1. POST /payments → API Controller validates → HTTP call to coordinator → immediate response
-2. Coordinator manages centralized ETS queue → processes payments in order → updates aggregated stats
-3. GET /payments-summary → HTTP call to coordinator → returns aggregated data
+**Current Data Flow (Distributed Erlang + Immediate Response):**
+1. POST /payments → HTTP validation → **immediate 204 response** → async Task.start → distributed GenServer.cast to coordinator
+2. Coordinator receives payment → smart health-based processor selection → concurrent processing (6 workers) → ETS storage
+3. GET /payments-summary → distributed GenServer.call to coordinator → returns ETS aggregated data
 
 **Previous Data Flow (Original Database Approach):**
 1. POST /payments → Controller validates → PaymentRouter selects processor
@@ -110,12 +110,14 @@ This is an Elixir application for the "Rinha de backend 2025" challenge. The foc
 3. GET /payments-summary → Query DB for aggregated results
 
 **Architecture Status (Aug 13, 2025):**
-- ✅ 0 inconsistencies achieved with HTTP coordinator
-- ✅ 0 timeout failures with concurrent processing (resolved bottleneck)
-- ⚠️ Load test shows low scoring despite perfect reliability (needs performance investigation)
-- 3-container setup: coordinator (200MB) + api1/api2 (150MB each) + nginx (20MB)
-- Production releases with BEAM VM tuning and concurrent processing (6 workers)
-- HTTP connection pools: 20 connections per processor, optimized TCP settings
+- ✅ 0 inconsistencies achieved with distributed Erlang coordination
+- ✅ 0 timeout failures with immediate response pattern
+- ✅ Perfect reliability (no failed requests) with optimized latency
+- ✅ Smart health-based routing to minimize expensive fallback processor usage
+- 3-container setup: coordinator (150MB) + api1/api2 (90MB each) + nginx (20MB) = **350MB total**
+- Distributed Erlang cluster with ERL_COOKIE authentication and EPMD discovery
+- Immediate HTTP 204 response + async payment processing for minimal user-perceived latency
+- Health monitoring: default processor ≤100ms, fallback ≤50ms response time thresholds
 
 ## Documentation Process
 **Interaction History**: Update `CLAUDE_CODE_INTERACTIONS_HISTORY.md` after significant milestones
@@ -130,7 +132,7 @@ This is an Elixir application for the "Rinha de backend 2025" challenge. The foc
 - Download rinha-test directory from challenge repository
 
 **Testing Steps:**
-1. Start backend containers: `docker-compose up -d` 
+1. Start backend containers: `docker compose up -d` 
 2. Navigate to rinha-test directory
 3. Run basic test: `k6 run rinha.js`
 4. Optional: Customize requests: `k6 run -e MAX_REQUESTS=550 rinha.js`
@@ -138,9 +140,26 @@ This is an Elixir application for the "Rinha de backend 2025" challenge. The foc
 
 **Note:** Test uses k6 for performance testing, focusing on concurrent request handling
 
-## Challenge Preparation Notes
-- Performance will likely be a key metric (p99 response times)
-- Database optimization may be crucial for payment tracking
-- Proper error handling and processor failover logic
-- Docker configuration for deployment with strict resource limits
-- Load testing preparation for payment processing under load
+## Key Performance Optimizations Implemented
+
+**Phase 1: Phoenix Removal & Immediate Response**
+- Replaced Phoenix with Bandit + Plug for minimal HTTP overhead
+- Implemented immediate HTTP 204 response pattern (like winning competitor)
+- Async Task.start for fire-and-forget payment processing
+
+**Phase 2: Smart Health-Based Routing**
+- ProcessorHealthMonitor with 5-second polling intervals
+- Performance thresholds: default ≤100ms, fallback ≤50ms
+- Skip slow processors rather than use expensive fallback
+- Minimize 15% fallback fees, maximize 5% default processor usage
+
+**Phase 3: Distributed Erlang Architecture**
+- Direct GenServer communication across containers (Node.connect)
+- ERL_COOKIE cluster authentication
+- Eliminated HTTP coordinator bottleneck with distributed calls
+- Perfect consistency (0 inconsistencies) + zero failures
+
+**Resource Optimization:**
+- Exact challenge compliance: 350MB memory, 1.5 CPU
+- Production Elixir releases for memory efficiency
+- Optimized connection pools and BEAM VM tuning

@@ -81,3 +81,18 @@
 **Context**: User reported "performance is veeery bad right now (crying...)" after distributed Erlang implementation was supposed to be best solution yet
 **Action**: Identified and removed all performance-killing debug logs (batch processing spam every 50ms, verbose per-payment logs, HTTP request logging), rebuilt coordinator container with optimized code
 **Learning**: Debug logging can create massive performance overhead (50ms intervals), production systems require minimal logging for optimal performance, distributed Erlang benefits only realized when overhead removed
+
+### 2025-08-13 - Immediate Response Pattern Implementation
+**Context**: Distributed Erlang achieved perfect consistency (0 inconsistencies, 0 failures) but throughput still below Phoenix baseline, analyzed competitor's Elixir solution for insights
+**Action**: Implemented immediate HTTP 204 response pattern before coordinator processing (like competitor), replaced blocking distributed calls with async Task.start fire-and-forget approach, fixed resource limits to comply with challenge 350MB/1.5CPU constraints
+**Learning**: Immediate response pattern eliminates HTTP request latency by responding before processing, competitor's winning strategy prioritizes user-perceived performance over internal processing delays, challenge resource compliance critical for fair comparison
+
+### 2025-08-13 - Smart Processor Health Monitoring & Routing Optimization  
+**Context**: Immediate response pattern worked well but excessive fallback processor usage (15% fees vs 5% default fees) hurting profitability, competitor used sophisticated health-based selection
+**Action**: Implemented ProcessorHealthMonitor GenServer with 5-second health polling, smart routing logic (default ≤100ms, fallback ≤50ms response time thresholds), performance-based processor selection replacing naive try-default-then-fallback approach
+**Learning**: Simple failover strategies waste profit on high-fee processors, health-based routing with strict performance thresholds maximizes low-fee processor usage, competitor's strategy: skip processing rather than use slow expensive processors
+
+### 2025-08-14 - Health Monitor Stability & Retry Logic Elimination
+**Context**: Performance regressed badly (2813 vs 576 fallback requests), health monitor crashing with GenServer timeouts despite correct decision logic, retry mechanisms interfering with health-based routing decisions
+**Action**: Fixed ProcessorHealthMonitor crashes by optimizing Finch pool configuration (20 connections, single pool), completely removed retry logic implementing user's simple approach (single attempt per selected processor, no recovery mechanisms), added debug logging to verify health monitor compliance
+**Learning**: Health monitor stability critical for smart routing effectiveness, retry mechanisms can bypass health monitor decisions and increase expensive processor usage, simple single-attempt approach more reliable than complex retry strategies

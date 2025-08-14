@@ -1,4 +1,31 @@
-last results (without Phoenix, without HTTP, distributed erlang)
+current version
+data_received..................: 2.5 MB   40 kB/s
+data_sent......................: 3.1 MB   49 kB/s
+default_total_amount...........: 153966.3 2481.254131/s
+default_total_fee..............: 7698.315 124.062707/s
+default_total_requests.........: 7737     124.686137/s
+fallback_total_amount..........: 55620.5  896.355861/s
+fallback_total_fee.............: 8343.075 134.453379/s
+fallback_total_requests........: 2795     45.043008/s
+http_req_blocked...............: p(99)=520µs   count=15260
+http_req_connecting............: p(99)=421.4µs count=15260
+http_req_duration..............: p(99)=4.67ms  count=15260
+  { expected_response:true }...: p(99)=4.67ms  count=15259
+http_req_failed................: 0.00%    ✓ 1           ✗ 15259
+http_req_receiving.............: p(99)=85µs    count=15260
+http_req_sending...............: p(99)=83µs    count=15260
+http_req_tls_handshaking.......: p(99)=0s      count=15260
+http_req_waiting...............: p(99)=4.53ms  count=15260
+http_reqs......................: 15260    245.923543/s
+iteration_duration.............: p(99)=1s      count=15222
+iterations.....................: 15222    245.311152/s
+payments_inconsistency.........: 0        0/s
+total_transactions_amount......: 209586.8 3377.609993/s
+transactions_failure...........: 0        0/s
+transactions_success...........: 15210    245.117765/s
+vus............................: 0        min=0         max=499
+
+results for commit 7aef65b4e5126d58705a8e01528d01b4923c088a (no Phoenix, no HTTP, distributed erlang)
 
 data_received..................: 3.3 MB    54 kB/s
 data_sent......................: 3.1 MB    50 kB/s

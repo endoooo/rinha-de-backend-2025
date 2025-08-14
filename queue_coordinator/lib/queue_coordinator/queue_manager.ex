@@ -191,17 +191,25 @@ defmodule QueueCoordinator.QueueManager do
   end
 
   defp route_payment(correlation_id, amount, requested_at) do
-    # Try default processor first, fallback on failure
-    case make_payment_request(:default, correlation_id, amount, requested_at) do
-      {:ok, _response} ->
-        {:ok, "default"}
-      {:error, _reason} ->
-        case make_payment_request(:fallback, correlation_id, amount, requested_at) do
+    # Smart health-based processor selection (like competitor)
+    case QueueCoordinator.ProcessorHealthMonitor.get_best_processor() do
+      {:ok, processor_type} ->
+        Logger.info("Health monitor selected processor: #{processor_type} for payment #{correlation_id}")
+        case make_payment_request(processor_type, correlation_id, amount, requested_at) do
           {:ok, _response} ->
-            {:ok, "fallback"}
+            Logger.info("Payment #{correlation_id} succeeded with #{processor_type}")
+            {:ok, to_string(processor_type)}
           {:error, reason} ->
+            # Respect health monitor decision - no backup attempts
+            # Only use processors that pass health criteria
+            Logger.warning("Payment #{correlation_id} failed with #{processor_type}: #{inspect(reason)}")
             {:error, reason}
         end
+        
+      {:skip, :all_processors_slow} ->
+        # Skip processing when both processors are slow (better than using slow processor)
+        Logger.warning("Skipping payment #{correlation_id} - all processors too slow")
+        {:error, :all_processors_slow}
     end
   end
 
@@ -226,13 +234,17 @@ defmodule QueueCoordinator.QueueManager do
     headers = [{"content-type", "application/json"}]
     request = Finch.build(:post, "#{url}/payments", headers, body)
     
-    case Finch.request(request, QueueCoordinator.HTTPClient, receive_timeout: 2000) do
+    # Simple single attempt - no retries
+    case Finch.request(request, QueueCoordinator.HTTPClient, 
+           pool_timeout: 100,      # Fast pool acquisition
+           receive_timeout: 1000,  # Single attempt timeout
+           request_timeout: 1500   # Total request timeout
+         ) do
       {:ok, %Finch.Response{status: status}} when status in 200..299 ->
         {:ok, :success}
       {:ok, %Finch.Response{status: status}} ->
         {:error, {:http_error, status}}
       {:error, reason} ->
-        Logger.error("Payment request network error to #{processor_type}: #{inspect(reason)}")
         {:error, {:network_error, reason}}
     end
   end

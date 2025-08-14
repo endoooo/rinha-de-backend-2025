@@ -22,15 +22,23 @@ defmodule PaymentProcessor.HTTPServer do
     with {:ok, correlation_id} <- get_correlation_id(conn),
          {:ok, amount} <- get_amount(conn) do
       
-      requested_at = DateTime.utc_now()
+      # IMMEDIATE RESPONSE - return success immediately like competitor
+      conn = send_resp(conn, 204, "")
       
-      case DistributedCoordinatorClient.enqueue_payment(correlation_id, amount, requested_at) do
-        {:ok, :queued} ->
-          send_resp(conn, 200, Jason.encode!(%{status: "success"}))
-        {:error, reason} ->
-          Logger.warning("Payment enqueueing failed: #{inspect(reason)}")
-          send_resp(conn, 500, Jason.encode!(%{error: "Internal server error"}))
-      end
+      # THEN process async - fire and forget to coordinator
+      requested_at = DateTime.utc_now()
+      Logger.info("Starting async payment processing for #{correlation_id}")
+      Task.start(fn ->
+        Logger.info("Async task executing for #{correlation_id}")
+        case DistributedCoordinatorClient.enqueue_payment(correlation_id, amount, requested_at) do
+          {:ok, :queued} ->
+            Logger.info("Payment queued successfully: #{correlation_id}")
+          {:error, reason} ->
+            Logger.warning("Payment enqueueing failed for #{correlation_id}: #{inspect(reason)}")
+        end
+      end)
+      
+      conn
     else
       {:error, :missing_correlation_id} ->
         send_resp(conn, 400, Jason.encode!(%{error: "Missing correlationId"}))

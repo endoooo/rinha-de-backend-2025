@@ -14,7 +14,7 @@ services:
       resources:
         limits:
           cpus: '0.3'
-          memory: 200M
+          memory: 150M
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -45,7 +45,7 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 150M
+          memory: 90M
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9999/health"]
@@ -76,7 +76,7 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 150M
+          memory: 90M
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9999/health"]
